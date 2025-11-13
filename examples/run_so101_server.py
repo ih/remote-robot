@@ -5,12 +5,13 @@ Start SO-101 RPyC server.
 Run this script on the computer connected to SO-101 hardware to enable remote control.
 
 Usage:
-    python run_so101_server.py --port /dev/ttyUSB0
+    python run_so101_server.py --port COM8
+    python run_so101_server.py  # Uses COM8 by default
 """
 
 import argparse
 
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
+from lerobot.cameras.configs import CameraConfig
 from lerobot.robots.so101_follower import SO101FollowerConfig
 from remote_robot.server.so101_server import start_so101_server, DEFAULT_SO101_PORT
 
@@ -20,8 +21,8 @@ def main():
     parser.add_argument(
         "--port",
         type=str,
-        default="/dev/ttyUSB0",
-        help="Serial port for SO-101 (default: /dev/ttyUSB0)"
+        default="COM8",
+        help="Serial port for SO-101 (default: COM8)"
     )
     parser.add_argument(
         "--server-port",
@@ -37,7 +38,7 @@ def main():
         disable_torque_on_disconnect=True,
         cameras={
             # Add cameras if needed
-            # "wrist": OpenCVCameraConfig(
+            # "wrist": CameraConfig(
             #     camera_index=0,
             #     fps=30,
             #     width=640,

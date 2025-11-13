@@ -1,12 +1,12 @@
 # remote-robot
 
-**LeRobot 0.4.2+ compatible remote robot control for Jetbot and SO-101**
+**LeRobot 0.4.1+ compatible remote robot control for Jetbot and SO-101**
 
 A Python package providing unified, LeRobot-compatible interfaces for remotely controlling Jetbot and SO-101 robots via RPyC. Supports both local and remote operation with drop-in API compatibility.
 
 ## Features
 
-- **LeRobot API Compatible**: Fully compatible with LeRobot 0.4.2+ `Robot` base class
+- **LeRobot API Compatible**: Fully compatible with LeRobot 0.4.1+ `Robot` base class
 - **Remote Control**: RPyC-based client-server architecture for network robot control
 - **Drop-in Replacement**: `SO101Remote` can replace `SO101Follower` in existing code
 - **Unified Interface**: Both robots implement the same LeRobot patterns
@@ -62,6 +62,10 @@ robot.disconnect()
 
 **On SO-101 machine (server):**
 ```bash
+# Windows
+python examples/run_so101_server.py --port COM8
+
+# Linux/macOS
 python examples/run_so101_server.py --port /dev/ttyUSB0
 ```
 
@@ -70,7 +74,7 @@ python examples/run_so101_server.py --port /dev/ttyUSB0
 from remote_robot import SO101Remote
 from lerobot.robots.so101_follower import SO101FollowerConfig
 
-config = SO101FollowerConfig(port="/dev/ttyUSB0")
+config = SO101FollowerConfig(port="COM8")  # Use /dev/ttyUSB0 on Linux/macOS
 robot = SO101Remote(config, remote_host="192.168.1.100")
 
 robot.connect()

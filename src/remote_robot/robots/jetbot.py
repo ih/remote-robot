@@ -8,9 +8,9 @@ from typing import Any
 
 import numpy as np
 
-from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
-from lerobot.common.robot_devices.robots.robot import Robot
-from lerobot.common.robot_devices.utils import DeviceAlreadyConnectedError, DeviceNotConnectedError
+from lerobot.cameras.utils import make_cameras_from_configs
+from lerobot.robots.robot import Robot
+from remote_robot.utils import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from remote_robot.robots.jetbot_config import JetbotConfig
 
 
@@ -30,12 +30,12 @@ class Jetbot(Robot):
     Example:
         ```python
         from remote_robot import Jetbot, JetbotConfig
-        from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
+        from lerobot.cameras.configs import CameraConfig
 
         config = JetbotConfig(
             mock=False,
             cameras={
-                "main": OpenCVCameraConfig(camera_index=0, fps=30, width=224, height=224)
+                "main": CameraConfig(camera_index=0, fps=30, width=224, height=224)
             }
         )
         robot = Jetbot(config)

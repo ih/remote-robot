@@ -6,7 +6,10 @@
       "Bash(nul)",
       "Bash(findstr:*)",
       "Bash(dir C:Projectsdevelopmental-robot-movement 2)",
-      "Bash(dir C:Projectsremote-robot 2)"
+      "Bash(dir C:Projectsremote-robot 2)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(dir /B C:Projectsremote-robotsrcremote_robotutils)"
     ],
     "deny": [],
     "ask": []

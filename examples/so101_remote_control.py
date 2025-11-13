@@ -35,7 +35,7 @@ def main():
 
     # Configure SO-101 (config is for remote robot)
     config = SO101FollowerConfig(
-        port="/dev/ttyUSB0",  # This is the port on the REMOTE machine
+        port="COM8",  # This is the port on the REMOTE machine
     )
 
     # Create remote robot client
@@ -48,7 +48,7 @@ def main():
     try:
         # Connect
         print("\nConnecting to remote SO-101...")
-        robot.connect(calibrate=True)
+        robot.connect(calibrate=False)
         print(f"Connected! is_connected={robot.is_connected}")
 
         # Print features
@@ -63,7 +63,7 @@ def main():
         # Move to neutral position (example)
         print("\nMoving to neutral position...")
         action = {
-            "shoulder_pan.pos": 0.0,
+            "shoulder_pan.pos": 0.3,
             "shoulder_lift.pos": 0.0,
             "elbow_flex.pos": 0.0,
             "wrist_flex.pos": 0.0,

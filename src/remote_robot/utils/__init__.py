@@ -14,6 +14,18 @@ from remote_robot.utils.remote_client import (
     RemoteConnectionError,
 )
 
+
+# Exception classes for device connection management
+class DeviceAlreadyConnectedError(Exception):
+    """Raised when attempting to connect to an already connected device."""
+    pass
+
+
+class DeviceNotConnectedError(Exception):
+    """Raised when attempting to use a device that is not connected."""
+    pass
+
+
 __all__ = [
     "encode_image",
     "decode_image",
@@ -24,4 +36,6 @@ __all__ = [
     "create_rpyc_connection",
     "test_connection",
     "RemoteConnectionError",
+    "DeviceAlreadyConnectedError",
+    "DeviceNotConnectedError",
 ]

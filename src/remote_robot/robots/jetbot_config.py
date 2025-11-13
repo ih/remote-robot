@@ -4,8 +4,8 @@ Jetbot robot configuration compatible with LeRobot 0.4.2+ API.
 
 from dataclasses import dataclass, field
 
-from lerobot.common.robot_devices.cameras.configs import CameraConfig
-from lerobot.common.robot_devices.robots.config import RobotConfig
+from lerobot.cameras.configs import CameraConfig
+from lerobot.robots.utils import RobotConfig
 
 
 @RobotConfig.register_subclass("jetbot")

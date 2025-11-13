@@ -9,9 +9,9 @@ import logging
 from functools import cached_property
 from typing import Any, Optional
 
-from lerobot.common.robot_devices.robots.config import RobotConfig
-from lerobot.common.robot_devices.robots.robot import Robot
-from lerobot.common.robot_devices.utils import DeviceAlreadyConnectedError, DeviceNotConnectedError
+from lerobot.robots.utils import RobotConfig
+from lerobot.robots.robot import Robot
+from remote_robot.utils import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
 
 from remote_robot.utils.remote_client import create_rpyc_connection, RemoteConnectionError
