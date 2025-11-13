@@ -1,0 +1,9 @@
+# Core dependencies - LeRobot 0.4.2+ compatible
+rpyc>=5.0.0
+numpy>=1.20.0
+opencv-python>=4.5.0
+lerobot>=0.4.0
+draccus>=0.8.0
+
+# Optional: Install with `pip install -e .[jetbot]` for Jetbot hardware
+# jetbot

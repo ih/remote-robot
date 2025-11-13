@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(dir /S /B C:Projectsremote-robot 2)",
+      "Bash(nul)",
+      "Bash(findstr:*)",
+      "Bash(dir C:Projectsdevelopmental-robot-movement 2)",
+      "Bash(dir C:Projectsremote-robot 2)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

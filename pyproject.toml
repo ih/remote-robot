@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remote-robot"
+version = "0.1.0"
+description = "LeRobot 0.4.2+ compatible remote robot control for Jetbot and SO-101"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Remote Robot Contributors"}
+]
+keywords = ["robotics", "lerobot", "jetbot", "so-101", "remote-control"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Robotics",
+]
+
+dependencies = [
+    "rpyc>=5.0.0",
+    "numpy>=1.20.0",
+    "opencv-python>=4.5.0",
+    "lerobot>=0.4.0",  # Required for base Robot class and utilities
+    "draccus>=0.8.0",  # Required for RobotConfig registration
+]
+
+[project.optional-dependencies]
+jetbot = [
+    "jetbot",  # Official Jetbot package (install on Jetbot hardware)
+]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "mypy>=0.950",
+]
+
+[project.urls]
+Homepage = "https://github.com/ih/remote-robot"
+Repository = "https://github.com/ih/remote-robot"
+Issues = "https://github.com/ih/remote-robot/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
