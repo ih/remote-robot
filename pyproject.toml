@@ -38,6 +38,9 @@ dependencies = [
 jetbot = [
     "jetbot",  # Official Jetbot package (install on Jetbot hardware)
 ]
+ui = [
+    "gradio>=5.0.0",  # Web UI for remote control
+]
 dev = [
     "pytest>=7.0.0",
     "black>=22.0.0",

@@ -7,3 +7,6 @@ draccus>=0.8.0
 
 # Optional: Install with `pip install -e .[jetbot]` for Jetbot hardware
 # jetbot
+
+# Optional: Install with `pip install -e .[ui]` for Gradio web interface
+# gradio>=5.0.0

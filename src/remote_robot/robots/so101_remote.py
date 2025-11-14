@@ -253,13 +253,27 @@ class SO101Remote(Robot):
             raise DeviceNotConnectedError(f"{self.name} is not connected")
 
         if self._is_remote:
+            # DEBUG: Log remote action transmission
+            logger.info(f"[SO101Remote] Sending action to remote server")
+            logger.info(f"[SO101Remote] Original action: {action}")
+            logger.info(f"[SO101Remote] Action types: {[(k, type(v).__name__) for k, v in action.items()]}")
+
             # Encode action for network transfer
             encoded_action = encode_action(action)
+            logger.info(f"[SO101Remote] Encoded action: {encoded_action}")
+            logger.info(f"[SO101Remote] Encoded types: {[(k, type(v).__name__) for k, v in encoded_action.items()]}")
+
             # Send to remote
+            logger.info(f"[SO101Remote] Calling remote send_action via RPyC...")
             encoded_result = self._conn.root.send_action(encoded_action)
+            logger.info(f"[SO101Remote] Received result from server: {encoded_result}")
+
             return encoded_result
         else:
-            return self._robot.send_action(action)
+            logger.info(f"[SO101Remote] Sending action to local robot: {action}")
+            result = self._robot.send_action(action)
+            logger.info(f"[SO101Remote] Local robot returned: {result}")
+            return result
 
     def disconnect(self) -> None:
         """Disconnect from robot."""

@@ -79,6 +79,22 @@ def disconnect_robot() -> tuple[str, str]:
         return f"Error during disconnect: {str(e)}", "error"
 
 
+def calibrate_robot() -> str:
+    """Calibrate the robot (must be connected first)."""
+    global robot
+
+    try:
+        if robot is None or not robot.is_connected:
+            return "Error: Must be connected first. Click 'Connect' before calibrating."
+
+        # Call calibration on the robot
+        robot.calibrate()
+        return "Calibration completed successfully! Robot is ready to use."
+
+    except Exception as e:
+        return f"Calibration failed: {str(e)}"
+
+
 def get_observation_once() -> tuple[Optional[np.ndarray], str, Dict[str, Any]]:
     """Get a single observation from the robot."""
     global robot
@@ -111,12 +127,12 @@ def get_observation_once() -> tuple[Optional[np.ndarray], str, Dict[str, Any]]:
 
 
 def send_action(shoulder_pan: float, shoulder_lift: float, elbow_flex: float,
-                wrist_flex: float, wrist_roll: float, gripper: float) -> str:
-    """Send motor commands to the robot."""
+                wrist_flex: float, wrist_roll: float, gripper: float) -> tuple[str, Dict[str, Any]]:
+    """Send motor commands to the robot and return updated motor feedback."""
     global robot
 
     if robot is None or not robot.is_connected:
-        return "Not connected to robot"
+        return "Not connected to robot", {}
 
     try:
         action = {
@@ -128,12 +144,57 @@ def send_action(shoulder_pan: float, shoulder_lift: float, elbow_flex: float,
             "gripper.pos": gripper,
         }
 
-        robot.send_action(action)
+        # CLIENT DEBUG: Log the action being sent
+        print(f"\n{'='*60}")
+        print(f"[CLIENT] Sending action at {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+        print(f"[CLIENT] Action dict: {action}")
+        print(f"[CLIENT] Robot connected: {robot.is_connected}")
+        print(f"[CLIENT] Robot calibrated: {robot.is_calibrated}")
+
+        # Get observation BEFORE sending action
+        obs_before = robot.get_observation()
+        motor_positions_before = {
+            key: float(value) for key, value in obs_before.items()
+            if not key.startswith("observation.images") and key != "main"
+        }
+        print(f"[CLIENT] Motor positions BEFORE action:")
+        for key, val in motor_positions_before.items():
+            print(f"  {key}: {val:.3f}")
+
+        # Send action
+        result = robot.send_action(action)
+        print(f"[CLIENT] send_action returned: {result}")
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        return f"Action sent at {timestamp}"
+
+        # Get updated observation after action
+        time.sleep(0.1)  # Small delay for motors to start moving
+        obs = robot.get_observation()
+
+        # Extract motor positions
+        motor_feedback = {
+            key: float(value) for key, value in obs.items()
+            if not key.startswith("observation.images") and key != "main"
+        }
+
+        # Compare before and after
+        print(f"[CLIENT] Motor positions AFTER action:")
+        for key, val in motor_feedback.items():
+            before_val = motor_positions_before.get(key, 0.0)
+            delta = val - before_val
+            print(f"  {key}: {val:.3f} (delta: {delta:+.3f})")
+        print(f"{'='*60}\n")
+
+        # Show the values being sent for debugging
+        values_str = ", ".join([f"{k.split('.')[0]}: {v:.2f}" for k, v in action.items()])
+        status = f"Action sent at {timestamp}\nValues: {values_str}\nCheck console for detailed debug info"
+
+        return status, motor_feedback
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        print(f"[CLIENT] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Error: {str(e)}", {}
 
 
 def live_feed_worker(interval: float):
@@ -220,6 +281,13 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
                     interactive=False
                 )
 
+                calibrate_btn = gr.Button("Calibrate Robot", variant="secondary")
+                calibration_status = gr.Textbox(
+                    label="Calibration Status",
+                    value="Not calibrated yet",
+                    interactive=False
+                )
+
             # Camera display
             with gr.Group():
                 gr.Markdown("### Camera Feed")
@@ -257,12 +325,12 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
 
                 motor_controls = []
                 motor_names = [
-                    ("shoulder_pan", "Shoulder Pan", -1.0, 1.0, 0.0),
-                    ("shoulder_lift", "Shoulder Lift", -1.0, 1.0, 0.0),
-                    ("elbow_flex", "Elbow Flex", -1.0, 1.0, 0.0),
-                    ("wrist_flex", "Wrist Flex", -1.0, 1.0, 0.0),
-                    ("wrist_roll", "Wrist Roll", -1.0, 1.0, 0.0),
-                    ("gripper", "Gripper", -1.0, 1.0, 0.0),
+                    ("shoulder_pan", "Shoulder Pan (deg)", -180.0, 180.0, 0.0),
+                    ("shoulder_lift", "Shoulder Lift (deg)", -180.0, 180.0, 0.0),
+                    ("elbow_flex", "Elbow Flex (deg)", -180.0, 180.0, 0.0),
+                    ("wrist_flex", "Wrist Flex (deg)", -180.0, 180.0, 0.0),
+                    ("wrist_roll", "Wrist Roll (deg)", -180.0, 180.0, 0.0),
+                    ("gripper", "Gripper (%)", 0.0, 100.0, 0.0),
                 ]
 
                 for key, label, min_val, max_val, default in motor_names:
@@ -311,15 +379,36 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
         status, status_type = disconnect_robot()
         return status
 
+    def handle_calibrate():
+        status = calibrate_robot()
+        return status
+
     def handle_get_observation():
         image, status, feedback = get_observation_once()
-        return image, status, feedback
+        # Extract motor positions for sliders
+        positions = [
+            feedback.get("shoulder_pan.pos", 0.0),
+            feedback.get("shoulder_lift.pos", 0.0),
+            feedback.get("elbow_flex.pos", 0.0),
+            feedback.get("wrist_flex.pos", 0.0),
+            feedback.get("wrist_roll.pos", 0.0),
+            feedback.get("gripper.pos", 0.0),
+        ]
+        return [image, status, feedback] + positions
 
     def handle_send_action(*motor_values):
-        # Extract values from tuples (slider, number)
-        values = [motor_values[i*2] for i in range(6)]  # Get slider values
-        status = send_action(*values)
-        return status
+        # motor_values already contains the 6 slider values
+        status, feedback = send_action(*motor_values)
+        # Extract motor positions for sliders
+        positions = [
+            feedback.get("shoulder_pan.pos", 0.0),
+            feedback.get("shoulder_lift.pos", 0.0),
+            feedback.get("elbow_flex.pos", 0.0),
+            feedback.get("wrist_flex.pos", 0.0),
+            feedback.get("wrist_roll.pos", 0.0),
+            feedback.get("gripper.pos", 0.0),
+        ]
+        return [status] + positions
 
     def handle_live_feed_toggle(active, interval):
         status = toggle_live_feed(active, interval)
@@ -337,17 +426,23 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
         outputs=[connection_status]
     )
 
-    refresh_btn.click(
-        fn=handle_get_observation,
-        outputs=[camera_display, observation_status, feedback_display]
+    calibrate_btn.click(
+        fn=handle_calibrate,
+        outputs=[calibration_status]
     )
 
-    # Get all slider values for send action
-    slider_inputs = [slider for slider, _ in motor_controls]
+    # Get all sliders for inputs/outputs
+    sliders = [slider for slider, _ in motor_controls]
+
+    refresh_btn.click(
+        fn=handle_get_observation,
+        outputs=[camera_display, observation_status, feedback_display] + sliders
+    )
+
     send_action_btn.click(
         fn=handle_send_action,
-        inputs=slider_inputs,
-        outputs=[action_status]
+        inputs=sliders,
+        outputs=[action_status] + sliders
     )
 
     # Live feed toggle
@@ -357,12 +452,8 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
         outputs=[observation_status]
     )
 
-    # Live feed auto-update
-    demo.load(
-        fn=update_live_feed,
-        outputs=[camera_display],
-        every=0.2  # Will only update when live_feed_active is True
-    )
+    # Note: Auto-update with 'every' parameter is not supported in Gradio 5.x
+    # Users can manually refresh or use the live feed toggle with manual polling
 
 
 if __name__ == "__main__":
