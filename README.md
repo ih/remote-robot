@@ -36,6 +36,9 @@ pip install -e .
 # For Jetbot hardware support
 pip install -e .[jetbot]
 
+# For Gradio web UI (SO-101 remote control interface)
+pip install -e .[ui]
+
 # For development
 pip install -e .[dev]
 ```
@@ -212,7 +215,25 @@ robot.connect()
 robot.disconnect()
 ```
 
-### 4. Integration with LeRobot
+### 4. Gradio Web UI (SO-101)
+
+For an interactive web interface to control the SO-101 robot:
+
+```bash
+# First, install the UI dependencies
+pip install -e .[ui]
+
+# Start the Gradio UI
+python examples/so101_gradio_ui.py
+```
+
+Then open the provided URL in your browser. The UI allows you to:
+- Connect to a remote SO-101 server
+- Control all 6 motors with input boxes
+- View real-time motor positions
+- Send actions and monitor feedback
+
+### 5. Integration with LeRobot
 
 ```python
 from lerobot.common.datasets import record_episode

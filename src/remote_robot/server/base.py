@@ -161,100 +161,13 @@ class BaseRobotServer(rpyc.Service, ABC):
             # Decode action (handles numpy arrays if encoded)
             decoded_action = decode_action(action)
 
-            # Debug logging - Enhanced
-            self.logger.info(f"{'='*70}")
-            self.logger.info(f"[SERVER] ACTION RECEIVED")
-            self.logger.info(f"[SERVER] Raw action: {action}")
-            self.logger.info(f"[SERVER] Raw action types: {[(k, type(v).__name__) for k, v in action.items()]}")
-            self.logger.info(f"[SERVER] Decoded action: {decoded_action}")
-            self.logger.info(f"[SERVER] Decoded types: {[(k, type(v).__name__) for k, v in decoded_action.items()]}")
-            self.logger.info(f"[SERVER] Robot instance: {type(self._robot).__name__}")
-            self.logger.info(f"[SERVER] Robot connected: {self._robot.is_connected if hasattr(self._robot, 'is_connected') else 'unknown'}")
-            self.logger.info(f"[SERVER] Robot calibrated: {self._robot.is_calibrated if hasattr(self._robot, 'is_calibrated') else 'unknown'}")
-
-            # Get observation BEFORE sending action
-            try:
-                obs_before = self._robot.get_observation()
-                motor_positions_before = {
-                    k: v for k, v in obs_before.items()
-                    if not k.startswith("observation.images") and k != "main"
-                }
-                self.logger.info(f"[SERVER] Motor positions BEFORE action:")
-                for key, val in motor_positions_before.items():
-                    self.logger.info(f"  {key}: {val}")
-            except Exception as e:
-                self.logger.warning(f"[SERVER] Could not get observation before action: {e}")
-                motor_positions_before = {}
-
-            # Check motor torque status BEFORE sending action
-            try:
-                if hasattr(self._robot, 'bus'):
-                    self.logger.info(f"[SERVER] Checking motor torque status...")
-                    torque_status = {}
-                    for motor_name in self._robot.bus.motors:
-                        try:
-                            torque_enabled = self._robot.bus.read("Torque_Enable", motor_name)
-                            torque_status[motor_name] = torque_enabled
-                        except Exception as e:
-                            torque_status[motor_name] = f"Error: {e}"
-                    self.logger.info(f"[SERVER] Motor torque status: {torque_status}")
-
-                    # Check if any motors have torque disabled
-                    disabled_motors = [m for m, status in torque_status.items() if status == 0 or status == False]
-                    if disabled_motors:
-                        self.logger.warning(f"[SERVER] WARNING: Torque is DISABLED on motors: {disabled_motors}")
-                        self.logger.warning(f"[SERVER] Motors will not move with torque disabled!")
-            except Exception as e:
-                self.logger.warning(f"[SERVER] Could not check torque status: {e}")
-
             # Send to robot
-            self.logger.info(f"[SERVER] Calling robot.send_action()...")
-
-            # Add detailed logging if this is an SO101Follower
-            if hasattr(self._robot, 'bus'):
-                try:
-                    # Log what will be written
-                    goal_pos = {key.removesuffix(".pos"): val for key, val in decoded_action.items() if key.endswith(".pos")}
-                    self.logger.info(f"[SERVER] Goal positions to write: {goal_pos}")
-
-                    # Call send_action and log any exceptions from the bus
-                    result = self._robot.send_action(decoded_action)
-                    self.logger.info(f"[SERVER] sync_write to Goal_Position completed")
-                except Exception as e:
-                    self.logger.error(f"[SERVER] Exception during send_action: {e}", exc_info=True)
-                    raise
-            else:
-                result = self._robot.send_action(decoded_action)
-
-            self.logger.info(f"[SERVER] robot.send_action() returned: {result}")
-            self.logger.info(f"[SERVER] Result type: {type(result).__name__}")
-
-            # Get observation AFTER sending action
-            try:
-                import time
-                time.sleep(0.05)  # Brief delay to let motors start moving
-                obs_after = self._robot.get_observation()
-                motor_positions_after = {
-                    k: v for k, v in obs_after.items()
-                    if not k.startswith("observation.images") and k != "main"
-                }
-                self.logger.info(f"[SERVER] Motor positions AFTER action:")
-                for key, val in motor_positions_after.items():
-                    before_val = motor_positions_before.get(key, 0.0)
-                    if isinstance(before_val, (int, float)) and isinstance(val, (int, float)):
-                        delta = val - before_val
-                        self.logger.info(f"  {key}: {val} (delta: {delta:+.3f})")
-                    else:
-                        self.logger.info(f"  {key}: {val}")
-            except Exception as e:
-                self.logger.warning(f"[SERVER] Could not get observation after action: {e}")
-
-            self.logger.info(f"{'='*70}")
+            result = self._robot.send_action(decoded_action)
 
             return result
 
         except Exception as e:
-            self.logger.error(f"[SERVER] Failed to send action: {e}", exc_info=True)
+            self.logger.error(f"Failed to send action: {e}")
             raise
 
     def exposed_is_connected(self) -> bool:

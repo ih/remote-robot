@@ -79,22 +79,6 @@ def disconnect_robot() -> tuple[str, str]:
         return f"Error during disconnect: {str(e)}", "error"
 
 
-def calibrate_robot() -> str:
-    """Calibrate the robot (must be connected first)."""
-    global robot
-
-    try:
-        if robot is None or not robot.is_connected:
-            return "Error: Must be connected first. Click 'Connect' before calibrating."
-
-        # Call calibration on the robot
-        robot.calibrate()
-        return "Calibration completed successfully! Robot is ready to use."
-
-    except Exception as e:
-        return f"Calibration failed: {str(e)}"
-
-
 def get_observation_once() -> tuple[Optional[np.ndarray], str, Dict[str, Any]]:
     """Get a single observation from the robot."""
     global robot
@@ -144,26 +128,8 @@ def send_action(shoulder_pan: float, shoulder_lift: float, elbow_flex: float,
             "gripper.pos": gripper,
         }
 
-        # CLIENT DEBUG: Log the action being sent
-        print(f"\n{'='*60}")
-        print(f"[CLIENT] Sending action at {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
-        print(f"[CLIENT] Action dict: {action}")
-        print(f"[CLIENT] Robot connected: {robot.is_connected}")
-        print(f"[CLIENT] Robot calibrated: {robot.is_calibrated}")
-
-        # Get observation BEFORE sending action
-        obs_before = robot.get_observation()
-        motor_positions_before = {
-            key: float(value) for key, value in obs_before.items()
-            if not key.startswith("observation.images") and key != "main"
-        }
-        print(f"[CLIENT] Motor positions BEFORE action:")
-        for key, val in motor_positions_before.items():
-            print(f"  {key}: {val:.3f}")
-
         # Send action
         result = robot.send_action(action)
-        print(f"[CLIENT] send_action returned: {result}")
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
         # Get updated observation after action
@@ -176,22 +142,13 @@ def send_action(shoulder_pan: float, shoulder_lift: float, elbow_flex: float,
             if not key.startswith("observation.images") and key != "main"
         }
 
-        # Compare before and after
-        print(f"[CLIENT] Motor positions AFTER action:")
-        for key, val in motor_feedback.items():
-            before_val = motor_positions_before.get(key, 0.0)
-            delta = val - before_val
-            print(f"  {key}: {val:.3f} (delta: {delta:+.3f})")
-        print(f"{'='*60}\n")
-
-        # Show the values being sent for debugging
+        # Show the values being sent
         values_str = ", ".join([f"{k.split('.')[0]}: {v:.2f}" for k, v in action.items()])
-        status = f"Action sent at {timestamp}\nValues: {values_str}\nCheck console for detailed debug info"
+        status = f"Action sent at {timestamp}\nValues: {values_str}"
 
         return status, motor_feedback
 
     except Exception as e:
-        print(f"[CLIENT] ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
         return f"Error: {str(e)}", {}
@@ -281,13 +238,6 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
                     interactive=False
                 )
 
-                calibrate_btn = gr.Button("Calibrate Robot", variant="secondary")
-                calibration_status = gr.Textbox(
-                    label="Calibration Status",
-                    value="Not calibrated yet",
-                    interactive=False
-                )
-
             # Camera display
             with gr.Group():
                 gr.Markdown("### Camera Feed")
@@ -325,35 +275,21 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
 
                 motor_controls = []
                 motor_names = [
-                    ("shoulder_pan", "Shoulder Pan (deg)", -180.0, 180.0, 0.0),
-                    ("shoulder_lift", "Shoulder Lift (deg)", -180.0, 180.0, 0.0),
-                    ("elbow_flex", "Elbow Flex (deg)", -180.0, 180.0, 0.0),
-                    ("wrist_flex", "Wrist Flex (deg)", -180.0, 180.0, 0.0),
-                    ("wrist_roll", "Wrist Roll (deg)", -180.0, 180.0, 0.0),
-                    ("gripper", "Gripper (%)", 0.0, 100.0, 0.0),
+                    ("shoulder_pan", "Shoulder Pan (deg)", 0.0),
+                    ("shoulder_lift", "Shoulder Lift (deg)", 0.0),
+                    ("elbow_flex", "Elbow Flex (deg)", 0.0),
+                    ("wrist_flex", "Wrist Flex (deg)", 0.0),
+                    ("wrist_roll", "Wrist Roll (deg)", 0.0),
+                    ("gripper", "Gripper (%)", 0.0),
                 ]
 
-                for key, label, min_val, max_val, default in motor_names:
-                    with gr.Row():
-                        slider = gr.Slider(
-                            label=label,
-                            minimum=min_val,
-                            maximum=max_val,
-                            value=default,
-                            step=0.01,
-                            scale=3
-                        )
-                        number = gr.Number(
-                            value=default,
-                            precision=3,
-                            scale=1
-                        )
-
-                    # Synchronize slider and number input
-                    slider.change(fn=lambda x: x, inputs=[slider], outputs=[number])
-                    number.change(fn=lambda x: x, inputs=[number], outputs=[slider])
-
-                    motor_controls.append((slider, number))
+                for key, label, default in motor_names:
+                    number = gr.Number(
+                        label=label,
+                        value=default,
+                        precision=3
+                    )
+                    motor_controls.append(number)
 
                 send_action_btn = gr.Button("Send Action", variant="primary")
                 action_status = gr.Textbox(
@@ -377,10 +313,6 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
 
     def handle_disconnect():
         status, status_type = disconnect_robot()
-        return status
-
-    def handle_calibrate():
-        status = calibrate_robot()
         return status
 
     def handle_get_observation():
@@ -426,23 +358,15 @@ with gr.Blocks(title="SO-101 Remote Control") as demo:
         outputs=[connection_status]
     )
 
-    calibrate_btn.click(
-        fn=handle_calibrate,
-        outputs=[calibration_status]
-    )
-
-    # Get all sliders for inputs/outputs
-    sliders = [slider for slider, _ in motor_controls]
-
     refresh_btn.click(
         fn=handle_get_observation,
-        outputs=[camera_display, observation_status, feedback_display] + sliders
+        outputs=[camera_display, observation_status, feedback_display] + motor_controls
     )
 
     send_action_btn.click(
         fn=handle_send_action,
-        inputs=sliders,
-        outputs=[action_status] + sliders
+        inputs=motor_controls,
+        outputs=[action_status] + motor_controls
     )
 
     # Live feed toggle
