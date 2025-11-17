@@ -1,5 +1,5 @@
 """
-RPyC server for Jetbot robot - Standalone version for Jetson Nano.
+RPyC server for Jetbot robot - Python 3.5+ compatible version.
 
 This server has minimal dependencies and does NOT require LeRobot.
 Only requires: rpyc, jetbot, opencv-python, numpy
@@ -7,7 +7,7 @@ Only requires: rpyc, jetbot, opencv-python, numpy
 Run this script on Jetbot hardware to enable remote control.
 
 Usage:
-    python jetbot_server.py
+    python jetbot_server_py35.py
 """
 
 import base64
@@ -33,7 +33,7 @@ class JetbotService(rpyc.Service):
     direct RPyC clients.
     """
 
-    def __init__(self, camera_width: int = 224, camera_height: int = 224):
+    def __init__(self, camera_width=224, camera_height=224):
         """
         Initialize Jetbot service.
 
@@ -41,7 +41,7 @@ class JetbotService(rpyc.Service):
             camera_width: Camera frame width
             camera_height: Camera frame height
         """
-        super().__init__()
+        super(JetbotService, self).__init__()
         self.robot = None
         self.camera = None
         self.camera_width = camera_width
@@ -51,15 +51,16 @@ class JetbotService(rpyc.Service):
         self._left_value = 0.0
         self._right_value = 0.0
 
-        logger.info(f"JetbotService initialized (camera: {camera_width}x{camera_height})")
+        logger.info("JetbotService initialized (camera: {}x{})".format(
+            camera_width, camera_height))
 
     def on_connect(self, conn):
         """Called when client connects."""
-        logger.info(f"Client connected from {conn}")
+        logger.info("Client connected from {}".format(conn))
 
     def on_disconnect(self, conn):
         """Called when client disconnects - ensures safe cleanup."""
-        logger.info(f"Client disconnected from {conn}")
+        logger.info("Client disconnected from {}".format(conn))
         try:
             # Stop camera
             if self.camera is not None:
@@ -72,11 +73,11 @@ class JetbotService(rpyc.Service):
                 self.robot.stop()
                 logger.info("Motors stopped")
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            logger.error("Error during cleanup: {}".format(e))
 
     # ===== Simple Motor Control API =====
 
-    def exposed_set_motors(self, left_speed: float, right_speed: float) -> bool:
+    def exposed_set_motors(self, left_speed, right_speed):
         """
         Set motor speeds (simple API for compatibility with reference server).
 
@@ -88,7 +89,7 @@ class JetbotService(rpyc.Service):
             True on success
         """
         try:
-            logger.debug(f"set_motors: left={left_speed}, right={right_speed}")
+            logger.debug("set_motors: left={}, right={}".format(left_speed, right_speed))
 
             # Lazy initialization
             if self.robot is None:
@@ -108,10 +109,10 @@ class JetbotService(rpyc.Service):
             return True
 
         except Exception as e:
-            logger.error(f"Error setting motors: {e}")
+            logger.error("Error setting motors: {}".format(e))
             raise
 
-    def exposed_get_camera_frame(self) -> str:
+    def exposed_get_camera_frame(self):
         """
         Get camera frame as base64-encoded JPEG.
 
@@ -122,8 +123,12 @@ class JetbotService(rpyc.Service):
             # Lazy initialization
             if self.camera is None:
                 from jetbot import Camera
-                logger.info(f"Initializing camera ({self.camera_width}x{self.camera_height})")
-                self.camera = Camera.instance(width=self.camera_width, height=self.camera_height)
+                logger.info("Initializing camera ({}x{})".format(
+                    self.camera_width, self.camera_height))
+                self.camera = Camera.instance(
+                    width=self.camera_width,
+                    height=self.camera_height
+                )
 
             # Get frame from camera
             frame = self.camera.value
@@ -137,13 +142,13 @@ class JetbotService(rpyc.Service):
             return jpg_as_text
 
         except Exception as e:
-            logger.error(f"Error getting camera frame: {e}")
+            logger.error("Error getting camera frame: {}".format(e))
             return None
 
     # ===== LeRobot-Compatible API =====
     # These methods allow the server to work with remote_robot.Jetbot client
 
-    def exposed_connect(self, calibrate: bool = True) -> None:
+    def exposed_connect(self, calibrate=True):
         """Connect to robot (LeRobot API compatibility)."""
         try:
             if self.robot is None:
@@ -152,10 +157,10 @@ class JetbotService(rpyc.Service):
                 self.robot = Robot()
             logger.info("Jetbot connected")
         except Exception as e:
-            logger.error(f"Failed to connect: {e}")
+            logger.error("Failed to connect: {}".format(e))
             raise
 
-    def exposed_disconnect(self) -> None:
+    def exposed_disconnect(self):
         """Disconnect from robot (LeRobot API compatibility)."""
         try:
             if self.robot is not None:
@@ -163,10 +168,10 @@ class JetbotService(rpyc.Service):
                 self.robot.stop()
             logger.info("Jetbot disconnected")
         except Exception as e:
-            logger.error(f"Failed to disconnect: {e}")
+            logger.error("Failed to disconnect: {}".format(e))
             raise
 
-    def exposed_send_action(self, action: dict) -> dict:
+    def exposed_send_action(self, action):
         """
         Send action to robot (LeRobot API compatibility).
 
@@ -191,10 +196,10 @@ class JetbotService(rpyc.Service):
                 "right_motor.value": right,
             }
         except Exception as e:
-            logger.error(f"Failed to send action: {e}")
+            logger.error("Failed to send action: {}".format(e))
             raise
 
-    def exposed_get_observation(self) -> dict:
+    def exposed_get_observation(self):
         """
         Get observation from robot (LeRobot API compatibility).
 
@@ -208,8 +213,8 @@ class JetbotService(rpyc.Service):
                 "right_motor.value": self._right_value,
             }
 
-            # Add camera frame if available
-            if self.camera is not None:
+            # Initialize and get camera frame
+            try:
                 frame_b64 = self.exposed_get_camera_frame()
                 if frame_b64:
                     obs["camera"] = {
@@ -218,29 +223,32 @@ class JetbotService(rpyc.Service):
                         "shape": (self.camera_height, self.camera_width, 3),
                         "dtype": "uint8",
                     }
+            except Exception as e:
+                logger.warning("Failed to get camera frame: {}".format(e))
+                # Continue without camera data
 
             return obs
         except Exception as e:
-            logger.error(f"Failed to get observation: {e}")
+            logger.error("Failed to get observation: {}".format(e))
             raise
 
-    def exposed_is_connected(self) -> bool:
+    def exposed_is_connected(self):
         """Check if robot is connected (LeRobot API compatibility)."""
         return self.robot is not None
 
-    def exposed_is_calibrated(self) -> bool:
+    def exposed_is_calibrated(self):
         """Jetbot doesn't require calibration (LeRobot API compatibility)."""
         return True
 
-    def exposed_calibrate(self) -> None:
+    def exposed_calibrate(self):
         """No-op for Jetbot (LeRobot API compatibility)."""
         pass
 
-    def exposed_configure(self) -> None:
+    def exposed_configure(self):
         """No-op for Jetbot (LeRobot API compatibility)."""
         pass
 
-    def exposed_get_observation_features(self) -> dict:
+    def exposed_get_observation_features(self):
         """Get observation feature definitions (LeRobot API compatibility)."""
         features = {
             "left_motor.value": "float",
@@ -250,7 +258,7 @@ class JetbotService(rpyc.Service):
             features["camera"] = (self.camera_height, self.camera_width, 3)
         return features
 
-    def exposed_get_action_features(self) -> dict:
+    def exposed_get_action_features(self):
         """Get action feature definitions (LeRobot API compatibility)."""
         return {
             "left_motor.value": "float",
@@ -259,10 +267,10 @@ class JetbotService(rpyc.Service):
 
 
 def start_jetbot_server(
-    port: int = DEFAULT_JETBOT_PORT,
-    host: str = "0.0.0.0",
-    camera_width: int = 224,
-    camera_height: int = 224,
+    port=DEFAULT_JETBOT_PORT,
+    host="0.0.0.0",
+    camera_width=224,
+    camera_height=224,
 ):
     """
     Start Jetbot RPyC server.
@@ -282,9 +290,9 @@ def start_jetbot_server(
     logger.info("=" * 60)
     logger.info("Starting Jetbot RPyC Server")
     logger.info("=" * 60)
-    logger.info(f"Host: {host}")
-    logger.info(f"Port: {port}")
-    logger.info(f"Camera: {camera_width}x{camera_height}")
+    logger.info("Host: {}".format(host))
+    logger.info("Port: {}".format(port))
+    logger.info("Camera: {}x{}".format(camera_width, camera_height))
     logger.info("=" * 60)
 
     # Create service
@@ -305,13 +313,13 @@ def start_jetbot_server(
 
     try:
         logger.info("Server started successfully")
-        logger.info(f"Clients can connect to {host}:{port}")
+        logger.info("Clients can connect to {}:{}".format(host, port))
         logger.info("Press Ctrl+C to stop server")
         server.start()
     except KeyboardInterrupt:
         logger.info("\nServer interrupted by user")
     except Exception as e:
-        logger.error(f"Server error: {e}")
+        logger.error("Server error: {}".format(e))
         raise
     finally:
         logger.info("Shutting down Jetbot server")

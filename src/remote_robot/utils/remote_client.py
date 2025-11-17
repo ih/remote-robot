@@ -48,6 +48,9 @@ def create_rpyc_connection(
             'allow_all_attrs': True,
             'sync_request_timeout': timeout,
             'allow_pickle': True,
+            'allow_public_attrs': True,
+            'instantiate_custom_exceptions': True,
+            'instantiate_oldstyle_exceptions': True,
         }
 
     last_error = None
